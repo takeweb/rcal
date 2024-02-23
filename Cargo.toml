@@ -1,0 +1,15 @@
+[package]
+name = "rcal"
+version = "0.1.0"
+edition = "2021"
+authors = ["takeweb takeweb@mac.com"]
+description = "Calendar command wrtten by Rust"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.34"
+clap = { version = "4.5.1", features = ["derive"] }
+colored = "2.1.0"
+jpholiday = "0.1.4"
+my_lib = { path = "../../rust_libs" }
