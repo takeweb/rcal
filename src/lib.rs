@@ -1,15 +1,21 @@
-use chrono::{Datelike, Local, NaiveDate, Weekday};
+use chrono::{Datelike, NaiveDate, Weekday};
 use colored::{ColoredString, Colorize};
 use jpholiday::jpholiday::JPHoliday;
 use my_lib::util_date;
 use my_lib::util_date::{MyCalendar, YearMonths};
 use std::borrow::Borrow;
 
+/// カレンダー期間
 struct Period {
     start_date: NaiveDate,
     end_date: NaiveDate,
 }
 impl Period {
+    /// カレンダー期間の初期化
+    ///
+    /// * `n` - 前後nカ月表示の指定。
+    /// * `year` - 指定年。
+    /// * `month` - 指定月。
     fn new(n: u32, year: i32, month: u32) -> Self {
         let start_date = util_date::get_before_month(n, year, month);
         let end_date = util_date::get_next_month(n, year, month);
@@ -20,26 +26,28 @@ impl Period {
     }
 }
 
+/// カレンダーコマンド
 pub struct CalCmd<'a> {
     jpholiday: JPHoliday<'a>,
     mycalendar: MyCalendar,
 }
 impl CalCmd<'_> {
+    /// カレンダーコマンドの初期化
+    ///
+    /// * `n` - 前後nカ月表示の指定。
+    /// * `year` - 指定年。
+    /// * `month` - 指定月。
     pub fn new(n: u32, year: i32, month: u32) -> Self {
-        // println!("n:{}", n);
-        // println!("year:{}", year);
-        // println!("month:{}", month);
         let jpholiday = JPHoliday::new();
         let period = Period::new(n, year, month);
         let mycalendar = MyCalendar::new(period.start_date, period.end_date);
-        // println!("start_date:{}", period.start_date);
-        // println!("end_date:{}", period.end_date);
         CalCmd {
             jpholiday,
             mycalendar,
         }
     }
 
+    /// カレンダーのリスト表示
     pub fn print_list(&self) {
         let keys = self.mycalendar.year_months.keys();
         for year_month in keys {
@@ -78,6 +86,7 @@ impl CalCmd<'_> {
         }
     }
 
+    /// カレンダー表示
     pub fn print_cal(&self) {
         let mut keys: Vec<YearMonths> = self
             .mycalendar
@@ -89,12 +98,12 @@ impl CalCmd<'_> {
         for year_month in keys {
             let calendar = self.mycalendar.year_months.get(&year_month).unwrap();
             let formatted_calendar: Vec<ColoredString> =
-                self.meke_cal(year_month.year, year_month.month, calendar);
+                self.make_cal(year_month.year, year_month.month, calendar);
             formatted_calendar.iter().for_each(|c| println!("{}", c));
         }
     }
 
-    fn meke_cal(
+    fn make_cal(
         &self,
         target_year: i32,
         target_month: u32,
@@ -133,23 +142,20 @@ impl CalCmd<'_> {
         for date in calendar {
             let target_date =
                 NaiveDate::from_ymd_opt(date.year(), date.month(), date.day()).unwrap();
-            // let week_index = usize::try_from(date.weekday().num_days_from_sunday()).unwrap();
             let week_index = date.weekday().num_days_from_sunday() as usize;
-            let colored_date;
-
-            if self.jpholiday.is_holiday(target_date.borrow()) {
-                colored_date = date.day().to_string().red();
+            let colored_date = if self.jpholiday.is_holiday(target_date.borrow()) {
+                date.day().to_string().red()
             } else {
                 if week_index == 0 {
-                    colored_date = date.day().to_string().red();
+                    date.day().to_string().red()
                 } else if week_index == 6 {
-                    colored_date = date.day().to_string().blue();
+                    date.day().to_string().blue()
                 } else {
-                    colored_date = date.day().to_string().white();
+                    date.day().to_string().white()
                 }
-            }
+            };
 
-            if self.is_today(target_date.borrow()) {
+            if util_date::is_today(target_date.borrow()) {
                 row[week_index] = colored_date.reversed();
             } else {
                 row[week_index] = colored_date;
@@ -192,12 +198,6 @@ impl CalCmd<'_> {
             String::from("").white(),
         ];
         empty_row
-    }
-
-    fn is_today(&self, target_date: &NaiveDate) -> bool {
-        let today = Local::now();
-        let today = NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap();
-        today == *target_date
     }
 
     fn get_holiday(&self, target_date: &NaiveDate) -> Option<String> {
