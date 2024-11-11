@@ -60,7 +60,7 @@ impl CalCmd<'_> {
                         println!(
                             "{} {} {}",
                             date.to_string().red(),
-                            util_date::get_jp_weekday(&date).red(),
+                            util_date::get_jp_weekday(date).red(),
                             holiday.red()
                         );
                     }
@@ -68,17 +68,17 @@ impl CalCmd<'_> {
                         Weekday::Sat => println!(
                             "{} {}",
                             date.to_string().blue(),
-                            util_date::get_jp_weekday(&date).blue()
+                            util_date::get_jp_weekday(date).blue()
                         ),
                         Weekday::Sun => println!(
                             "{} {}",
                             date.to_string().red(),
-                            util_date::get_jp_weekday(&date).red()
+                            util_date::get_jp_weekday(date).red()
                         ),
                         _ => println!(
                             "{} {}",
                             date.to_string().white(),
-                            util_date::get_jp_weekday(&date).white()
+                            util_date::get_jp_weekday(date).white()
                         ),
                     },
                 }
@@ -122,9 +122,9 @@ impl CalCmd<'_> {
 
         let header1 = format!(
             "{}年({}){}月",
-            target_year.to_string(),
+            target_year,
             util_date::get_wareki(&NaiveDate::from_ymd_opt(target_year, target_month, 1).unwrap()),
-            target_month.to_string()
+            target_month
         );
         let header2 = format!(
             "{} {} {} {} {} {} {}",
@@ -143,16 +143,14 @@ impl CalCmd<'_> {
             let target_date =
                 NaiveDate::from_ymd_opt(date.year(), date.month(), date.day()).unwrap();
             let week_index = date.weekday().num_days_from_sunday() as usize;
-            let colored_date = if self.jpholiday.is_holiday(target_date.borrow()) {
-                date.day().to_string().red()
+            let colored_date = date.day().to_string();
+            let colored_date = if self.jpholiday.is_holiday(target_date.borrow()) || week_index == 0
+            {
+                colored_date.red()
+            } else if week_index == 6 {
+                colored_date.blue()
             } else {
-                if week_index == 0 {
-                    date.day().to_string().red()
-                } else if week_index == 6 {
-                    date.day().to_string().blue()
-                } else {
-                    date.day().to_string().white()
-                }
+                colored_date.white()
             };
 
             if util_date::is_today(target_date.borrow()) {
