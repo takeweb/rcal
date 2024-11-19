@@ -60,7 +60,7 @@ impl CalCmd<'_> {
                         println!(
                             "{} {} {}",
                             date.to_string().red(),
-                            util_date::get_jp_weekday(&date).red(),
+                            util_date::get_jp_weekday(date).red(),
                             holiday.red()
                         );
                     }
@@ -68,17 +68,17 @@ impl CalCmd<'_> {
                         Weekday::Sat => println!(
                             "{} {}",
                             date.to_string().blue(),
-                            util_date::get_jp_weekday(&date).blue()
+                            util_date::get_jp_weekday(date).blue()
                         ),
                         Weekday::Sun => println!(
                             "{} {}",
                             date.to_string().red(),
-                            util_date::get_jp_weekday(&date).red()
+                            util_date::get_jp_weekday(date).red()
                         ),
                         _ => println!(
                             "{} {}",
                             date.to_string().white(),
-                            util_date::get_jp_weekday(&date).white()
+                            util_date::get_jp_weekday(date).white()
                         ),
                     },
                 }
@@ -95,11 +95,67 @@ impl CalCmd<'_> {
             .cloned()
             .collect::<Vec<YearMonths>>();
         keys.sort();
-        for year_month in keys {
-            let calendar = self.mycalendar.year_months.get(&year_month).unwrap();
-            let formatted_calendar: Vec<ColoredString> =
-                self.make_cal(year_month.year, year_month.month, calendar);
-            formatted_calendar.iter().for_each(|c| println!("{}", c));
+
+        // 3カ月分のカレンダーを生成し、ヘッダーとともに出力する
+        let calendars = keys.chunks(3);
+        for chunk in calendars {
+            // 年と月の和暦付きヘッダーを表示（最初の1行のみ）
+            for (i, year_month) in chunk.iter().enumerate() {
+                let header = format!(
+                    "{}年({}){}月",
+                    year_month.year,
+                    util_date::get_wareki(
+                        &NaiveDate::from_ymd_opt(year_month.year, year_month.month, 1).unwrap()
+                    ),
+                    year_month.month
+                );
+                print!("{:<15}", header); // 各月を適切に揃えて出力
+                if i < chunk.len() - 1 {
+                    print!("   ");
+                }
+            }
+            println!();
+
+            // 曜日のヘッダーを表示
+            for (i, _) in chunk.iter().enumerate() {
+                let header2 = format!(
+                    "{} {} {} {} {} {} {}",
+                    String::from("日").red(),
+                    String::from("月"),
+                    String::from("火"),
+                    String::from("水"),
+                    String::from("木"),
+                    String::from("金"),
+                    String::from("土").blue()
+                );
+                print!("{:<21}", header2);
+                if i < chunk.len() - 1 {
+                    print!("   ");
+                }
+            }
+            println!();
+
+            // 各月の行を揃えて並べて表示
+            let mut month_calendars: Vec<Vec<ColoredString>> = Vec::new();
+            for year_month in chunk {
+                let calendar = self.mycalendar.year_months.get(year_month).unwrap();
+                let formatted_calendar = self.make_cal(year_month.year, year_month.month, calendar);
+                month_calendars.push(formatted_calendar);
+            }
+
+            for row in 0..6 {
+                for (i, month_calendar) in month_calendars.iter().enumerate() {
+                    if row < month_calendar.len() {
+                        print!("{:<21}", month_calendar[row]);
+                    } else {
+                        print!("{:<21}", " ");
+                    }
+                    if i < month_calendars.len() - 1 {
+                        print!("   ");
+                    }
+                }
+                println!();
+            }
         }
     }
 
@@ -120,39 +176,18 @@ impl CalCmd<'_> {
         let mut row = self.get_empty_row();
         let mut week_end = false;
 
-        let header1 = format!(
-            "{}年({}){}月",
-            target_year.to_string(),
-            util_date::get_wareki(&NaiveDate::from_ymd_opt(target_year, target_month, 1).unwrap()),
-            target_month.to_string()
-        );
-        let header2 = format!(
-            "{} {} {} {} {} {} {}",
-            String::from("日").red(),
-            String::from("月"),
-            String::from("火"),
-            String::from("水"),
-            String::from("木"),
-            String::from("金"),
-            String::from("土").blue()
-        );
-        result.push(header1.white());
-        result.push(header2.white());
-
         for date in calendar {
             let target_date =
                 NaiveDate::from_ymd_opt(date.year(), date.month(), date.day()).unwrap();
             let week_index = date.weekday().num_days_from_sunday() as usize;
-            let colored_date = if self.jpholiday.is_holiday(target_date.borrow()) {
-                date.day().to_string().red()
+            let colored_date = date.day().to_string();
+            let colored_date = if self.jpholiday.is_holiday(target_date.borrow()) || week_index == 0
+            {
+                colored_date.red()
+            } else if week_index == 6 {
+                colored_date.blue()
             } else {
-                if week_index == 0 {
-                    date.day().to_string().red()
-                } else if week_index == 6 {
-                    date.day().to_string().blue()
-                } else {
-                    date.day().to_string().white()
-                }
+                colored_date.white()
             };
 
             if util_date::is_today(target_date.borrow()) {
