@@ -29,6 +29,16 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+    let (start_date, end_date) = parse_args(&args);
+    let cmd = rcal::CalCmd::new(start_date, end_date);
+    if args.list {
+        cmd.print_list();
+    } else {
+        cmd.print_cal();
+    }
+}
+
+fn parse_args(args: &Args) -> (NaiveDate, NaiveDate) {
     let today = Local::now().date_naive();
     let start_date = match args.year {
         None => NaiveDate::from_ymd_opt(today.year(), today.month(), 1),
@@ -53,12 +63,5 @@ fn main() {
         start_date = util_date::get_before_month(1, today.year(), today.month());
         end_date = util_date::get_next_month(1, today.year(), today.month());
     }
-
-    let cmd = rcal::CalCmd::new(start_date, end_date);
-
-    if args.list {
-        cmd.print_list();
-    } else {
-        cmd.print_cal();
-    }
+    (start_date, end_date)
 }
