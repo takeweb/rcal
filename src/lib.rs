@@ -5,27 +5,6 @@ use my_lib::util_date;
 use my_lib::util_date::{MyCalendar, YearMonths};
 use std::borrow::Borrow;
 
-/// カレンダー期間
-struct Period {
-    start_date: NaiveDate,
-    end_date: NaiveDate,
-}
-impl Period {
-    /// カレンダー期間の初期化
-    ///
-    /// * `n` - 前後nカ月表示の指定。
-    /// * `year` - 指定年。
-    /// * `month` - 指定月。
-    fn new(n: u32, year: i32, month: u32) -> Self {
-        let start_date = util_date::get_before_month(n, year, month);
-        let end_date = util_date::get_next_month(n, year, month);
-        Period {
-            start_date,
-            end_date,
-        }
-    }
-}
-
 /// カレンダーコマンド
 pub struct CalCmd<'a> {
     jpholiday: JPHoliday<'a>,
@@ -34,13 +13,11 @@ pub struct CalCmd<'a> {
 impl CalCmd<'_> {
     /// カレンダーコマンドの初期化
     ///
-    /// * `n` - 前後nカ月表示の指定。
-    /// * `year` - 指定年。
-    /// * `month` - 指定月。
-    pub fn new(n: u32, year: i32, month: u32) -> Self {
+    /// * `start_date` - 開始日
+    /// * `end_date` - 終了日
+    pub fn new(start_date: NaiveDate, end_date: NaiveDate) -> Self {
         let jpholiday = JPHoliday::new();
-        let period = Period::new(n, year, month);
-        let mycalendar = MyCalendar::new(period.start_date, period.end_date);
+        let mycalendar = MyCalendar::new(start_date, end_date);
         CalCmd {
             jpholiday,
             mycalendar,
