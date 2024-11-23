@@ -9,6 +9,8 @@ use std::borrow::Borrow;
 pub struct CalCmd<'a> {
     jpholiday: JPHoliday<'a>,
     mycalendar: MyCalendar,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
 }
 impl CalCmd<'_> {
     /// カレンダーコマンドの初期化
@@ -21,6 +23,8 @@ impl CalCmd<'_> {
         CalCmd {
             jpholiday,
             mycalendar,
+            start_date,
+            end_date,
         }
     }
 
@@ -73,22 +77,44 @@ impl CalCmd<'_> {
             .collect::<Vec<YearMonths>>();
         keys.sort();
 
+        if !self.is_single_month() {
+            let start_date = self.mycalendar.get_start_date().unwrap();
+            // 年(和暦)ヘッダーを表示
+            let header_hear = format!(
+                "{}({})年",
+                start_date.year,
+                util_date::get_wareki_without_year(
+                    &NaiveDate::from_ymd_opt(start_date.year, start_date.month, 1).unwrap()
+                ),
+            );
+            println!("{:^60}", header_hear);
+        }
+
         // 3カ月分のカレンダーを生成し、ヘッダーとともに出力する
         let calendars = keys.chunks(3);
         for chunk in calendars {
-            // 年と月の和暦付きヘッダーを表示（最初の1行のみ）
             for (i, year_month) in chunk.iter().enumerate() {
-                let header = format!(
-                    "{}年({}){}月",
-                    year_month.year,
-                    util_date::get_wareki(
-                        &NaiveDate::from_ymd_opt(year_month.year, year_month.month, 1).unwrap()
-                    ),
-                    year_month.month
-                );
-                print!("{:<15}", header); // 各月を適切に揃えて出力
-                if i < chunk.len() - 1 {
-                    print!("   ");
+                let header = if self.is_single_month() {
+                    // 年(和暦)と月のヘッダーを表示
+                    format!(
+                        "{}({})年{}月",
+                        year_month.year,
+                        util_date::get_wareki_without_year(
+                            &NaiveDate::from_ymd_opt(year_month.year, year_month.month, 1).unwrap()
+                        ),
+                        year_month.month
+                    )
+                } else {
+                    // 月のみのヘッダーを表示
+                    format!("{}月", year_month.month)
+                };
+                if self.is_single_month() {
+                    print!("{:^17}", header); // 各月を適切に揃えて出力
+                } else {
+                    print!("{:^20}", header); // 各月を適切に揃えて出力
+                    if i < chunk.len() - 1 {
+                        print!("   ");
+                    }
                 }
             }
             println!();
@@ -214,5 +240,10 @@ impl CalCmd<'_> {
 
     fn get_holiday(&self, target_date: &NaiveDate) -> Option<String> {
         self.jpholiday.is_holiday_name(target_date)
+    }
+
+    fn is_single_month(&self) -> bool {
+        self.start_date.year() == self.end_date.year()
+            && self.start_date.month() == self.end_date.month()
     }
 }
